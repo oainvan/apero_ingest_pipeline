@@ -1,0 +1,4 @@
+/.idea
+ingest_by_cloud_run/marketing_system_ingest_pipeline/key/**
+push_message/marketing_system_ingest_pipeline/log/**
+__pycache__
