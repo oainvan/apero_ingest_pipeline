@@ -1,5 +1,5 @@
 product:
   gcp_project_id: "apero-data-warehouse"
   pubsub_topic: "projects/apero-data-warehouse/topics/marketing-system-ingest-data"
-  bucket_log: "log_ingest_firebase_raw_warehouse"
+  bucket_id: "apero-marketing-raw"
   webhook: "https://discord.com/api/webhooks/1121479026041683980/1zgR9hGUYTOfKwIST0o8P8D-8Ge2-S8nJnNUYYYF7M24rCyKSTl1lmK6-BXPxr7LOCoY"
