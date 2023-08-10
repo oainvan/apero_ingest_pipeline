@@ -7,79 +7,44 @@ from datetime import datetime, timedelta, timezone
 import pytz
 from commons.google_cloud_pubsub import *
 from commons.Utils import *
+from logics import MarketingSystemPipeline
 from commons.google_cloud_bigquery import *
 from google.cloud import bigquery
 from commons.google_cloud_storage import *
 from datetime import datetime
 import json
 from pytz import timezone
+from commons.common_functions import *
 
 credentials_path = "key/apero-data-warehouse-connector.json"
 os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = credentials_path
-#
-# object_id = 'file_type/flow/channel/level/year/month/2023-08-01/12/1691486724916_acc1.json'
-object_id = 'metrics/cost/mintegral/hours/2023/08/2023-08-01/12/1691486724916_acc1.json'
-# object_id = "metadata/cost/mintegral/hours/2023/08/2023-08-01/12/1691486724916_acc1.json"
-# object_id = 'metrics/cost/mintegral/hours/2023/08/2023-08-01/1691486724916_acc1.json'
-# object_id = 'metrics/cost/mintegral/hours/2023/08/1691486724916_acc1.json'
 
+str = "metadata/revenue/admob/hours/2023/08/2023-08-10/16/1691659319765_c72eceec-ecee-4939-9a0a-aad9f34e29ed.json"
+str1 = "metrics/cost/mintegral/hours/2023/08/2023-08-10/16/1691661049335_107a645d-9da7-4630-89f2-329ca91ffb29.json"
+str2 = "metadata/cost/mintegral/hours/2023/08/2023-08-10/16/1691661049335_6cbf02b9-6d13-46aa-bff5-195c0ee385f5.json"
+attributes= {
+    "bucketId": "apero-marketing-raw",
+    "eventTime": "2023-08-10T09:34:06.928335Z",
+    "eventType": "OBJECT_FINALIZE",
+    "notificationConfig": "projects/_/buckets/apero-marketing-raw/notificationConfigs/5",
+    "objectGeneration": "1691660046922860",
+    "objectId": str,
+    "payloadFormat": "JSON_API_V1"
+  }
 
+def get_cur_date():
+    return datetime.now(timezone("Asia/Ho_Chi_Minh"))
+def g_logger(run_date, folder):
+    """
+    Create logging.
+    :param run_date:
+    :param folder:
+    :return:
+    """
+    logger = get_logger(folder, run_date.date(), run_date.hour)
+    return logger
+run_date = get_cur_date()
+logger = g_logger(run_date, "ComparePush")
 
-info = object_id.split("/")
-file_type = info[0]
-flow = info[1]
-channel = info[2]
-level = info[3]
-year = info[4]
-month = info[5]
-timestamp = info[-1].split("_")[0]
-
-if level == 'hours':
-    export_date = info[6]
-    hours = info[7]
-elif level == 'day':
-    export_date = info[6]
-
-
-client = storage.Client(project="apero-data-warehouse")
-bucket = client.get_bucket("apero-marketing-raw")
-blob = bucket.blob(object_id)
-json_content = blob.download_as_text()
-data = json.loads(json_content)['data']
-# print(data)
-df = pd.read_csv(StringIO(data), sep='\t')
-print(df)
-
-# if file_type == 'metadata':
-#     data = json.loads(json_content)
-#     metadata = data['data']
-#     df = pd.DataFrame()
-#     for campaignInfo in metadata:
-#         df1 = pd.DataFrame(campaignInfo.values())
-#         df = pd.concat([df,df1])
-#
-df['channel'] = channel
-df['level'] = level
-df['year'] = year
-df['month'] = month
-df['export_date'] = export_date
-df['hours'] = hours
-df['timestamp'] = timestamp
-#
-# df['export_date'] = pd.to_datetime(df['export_date'].astype(str), format="%Y-%m-%d").dt.date
-#
-# client = bigquery.Client()
-# partitioning = bigquery.table.TimePartitioning(
-#     type_=bigquery.TimePartitioningType.DAY,
-#     field='export_date'  # Specify the field to use for partitioning
-# )
-# job_config = bigquery.LoadJobConfig(
-#     write_disposition="WRITE_APPEND",
-#     time_partitioning=partitioning
-# )
-# job_config.clustering_fields = 'channel'
-# df = df.reset_index(drop=True)
-# job = client.load_table_from_dataframe(
-#     df, f"oai_dev_2.{file_type}_{channel}_{flow}_{level}", job_config=job_config
-# )
-# job.result()
+upload = MarketingSystemPipeline(logger, 'product')
+upload.run(attributes)

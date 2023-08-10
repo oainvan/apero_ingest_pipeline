@@ -4,10 +4,12 @@ from pytz import timezone
 import yaml
 
 
-def upload_df_to_bigquery(logger, df_upload, table_upload):
+def upload_df_to_bigquery(logger, df_upload, table_upload, partition, cluster):
     """
     Upload data frame to bigquery table.
 
+    :param cluster:
+    :param partition:
     :param logger:
     :param df_upload:
     :param table_upload:
@@ -18,6 +20,14 @@ def upload_df_to_bigquery(logger, df_upload, table_upload):
     job_config = bigquery.LoadJobConfig(
         write_disposition="WRITE_APPEND"
     )
+    if partition:
+        partitioning = bigquery.table.TimePartitioning(
+            type_=bigquery.TimePartitioningType.DAY,
+            field=partition
+        )
+        job_config.time_partitioning = partitioning
+    if cluster:
+        job_config.clustering_fields = cluster
     job_config.labels = {
         "requestor": "marketing_ingest_pipeline",
         "category": "upload_df_to_bigquery",
@@ -26,9 +36,9 @@ def upload_df_to_bigquery(logger, df_upload, table_upload):
         df_upload, table_upload, job_config=job_config
     )
     if not job.result():
-        logger.error(f"Job upload df to bigquery failed. Job id: {job.job_id}")
-        raise Exception(f"Job upload df to bigquery failed. Job id: {job.job_id}")
-    logger.info(f'Job upload df to bigquery done: Table upload : {table_upload}')
+        logger.error(f"Job upload df to {table_upload} failed. Job id: {job.job_id}")
+        raise Exception(f"Job upload df to {table_upload} failed. Job id: {job.job_id}")
+    logger.info(f'Job upload df to {table_upload} done: Table upload : {table_upload}')
 
 
 def get_bq_table_to_dataframe(sql, labels):

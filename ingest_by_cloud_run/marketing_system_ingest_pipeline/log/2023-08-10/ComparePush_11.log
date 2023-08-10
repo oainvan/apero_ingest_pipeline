@@ -1,0 +1,2 @@
+INFO - 2023-08-10 11:33:10,361 - Job upload df to bigquery done: Table upload : apero-data-warehouse.apero_marketing_raw.mintegral_cost_hour_metrics
+INFO - 2023-08-10 11:35:17,156 - Job upload df to bigquery done: Table upload : apero-data-warehouse.apero_marketing_raw.mintegral_cost_hour_metrics

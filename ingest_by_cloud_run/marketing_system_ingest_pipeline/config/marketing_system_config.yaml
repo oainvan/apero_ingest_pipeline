@@ -3,3 +3,10 @@ product:
   pubsub_topic: "projects/apero-data-warehouse/topics/marketing-system-ingest-data"
   bucket_id: "apero-marketing-raw"
   webhook: "https://discord.com/api/webhooks/1121479026041683980/1zgR9hGUYTOfKwIST0o8P8D-8Ge2-S8nJnNUYYYF7M24rCyKSTl1lmK6-BXPxr7LOCoY"
+
+bq_config:
+  dataset:
+    metrics: 'apero_marketing_raw'
+    metadata: 'apero_marketing_metadata'
+  table:
+    table_upload: '{channel}_{flow}_{level}_{file_type}'

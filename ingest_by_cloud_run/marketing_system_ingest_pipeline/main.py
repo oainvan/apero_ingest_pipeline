@@ -1,81 +1,61 @@
-from enum import Enum
+import logging
+import os
 import traceback
-from io import StringIO
 
-import pandas as pd
-from datetime import datetime, timedelta, timezone
-import pytz
-from commons.google_cloud_pubsub import *
-from commons.Utils import *
-from commons.google_cloud_bigquery import *
-from google.cloud import bigquery
-from commons.google_cloud_storage import *
+import google.cloud.logging
+from flask import Flask, request
+from logics import MarketingSystemPipeline
 from datetime import datetime
-import json
 from pytz import timezone
+from commons.Utils import *
 
-credentials_path = "key/apero-data-warehouse-connector.json"
-os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = credentials_path
-#
-# object_id = 'file_type/flow/channel/level/year/month/2023-08-01/12/1691486724916_acc1.json'
-# object_id = 'metrics/cost/mintegral/hours/2023/08/2023-08-01/12/1691486724916_acc1.json'
-object_id = "metadata/cost/mintegral/hours/2023/08/2023-08-01/12/1691486724916_acc1.json"
-# object_id = 'metrics/cost/mintegral/hours/2023/08/2023-08-01/1691486724916_acc1.json'
-# object_id = 'metrics/cost/mintegral/hours/2023/08/1691486724916_acc1.json'
+google_logging_client = google.cloud.logging.Client()
+google_logging_client.setup_logging()
+logger = logging
+
+app = Flask(__name__)
 
 
+@app.route('/', methods=["POST"])
+def index():
+    envelope = request.get_json()
+    logger.info("Import workflow - Rec: {msg}".format(msg=str(envelope)))
+    if not envelope:
+        msg = "No Pub/Sub message received"
+        logger.error(f"Error: {msg}")
+        return f"Bad Request: {msg}", 204
 
-info = object_id.split("/")
-file_type = info[0]
-flow = info[1]
-channel = info[2]
-level = info[3]
-year = info[4]
-month = info[5]
-timestamp = info[-1].split("_")[0]
+    if not isinstance(envelope, dict) or "message" not in envelope:
+        msg = "Invalid Pub/Sub message format"
+        logger.error(f"Error: {msg}")
+        return f"Bad Request: {msg}", 204
 
-if level == 'hours':
-    export_date = info[6]
-    hours = info[7]
-elif level == 'day':
-    export_date = info[6]
+    pubsub_message = envelope["message"]["attributes"]
+
+    if 'eventType' not in pubsub_message:
+        return "Message Invalid", 204
+
+    run_env = "product"
+
+    try:
+        mkt_ingest = MarketingSystemPipeline(
+            logger=logger,
+            env=run_env
+        )
+        mkt_ingest.run(pubsub_message)
+
+    except Exception as ex:
+        logger.error("Exception: {msg}".format(msg=traceback.format_exc()))
+        send_except_alert(
+            run_env,
+            "Exception: {msg}".format(msg=ex),
+            "Marketing System Ingest Pipeline"
+        )
+        return "", 204
+
+    return "Run Successfully", 200
 
 
-client = storage.Client(project="apero-data-warehouse")
-bucket = client.get_bucket("apero-marketing-raw")
-blob = bucket.blob(object_id)
-json_content = blob.download_as_text()
-
-if file_type == 'metadata':
-    data = json.loads(json_content)
-    metadata = data['data']
-    df = pd.DataFrame()
-    for campaignInfo in metadata:
-        df1 = pd.DataFrame(campaignInfo.values())
-        df = pd.concat([df,df1])
-
-df['channel'] = channel
-df['level'] = level
-df['year'] = year
-df['month'] = month
-df['export_date'] = export_date
-df['hours'] = hours
-df['timestamp'] = timestamp
-
-df['export_date'] = pd.to_datetime(df['export_date'].astype(str), format="%Y-%m-%d").dt.date
-
-client = bigquery.Client()
-partitioning = bigquery.table.TimePartitioning(
-    type_=bigquery.TimePartitioningType.DAY,
-    field='export_date'  # Specify the field to use for partitioning
-)
-job_config = bigquery.LoadJobConfig(
-    write_disposition="WRITE_APPEND",
-    time_partitioning=partitioning
-)
-job_config.clustering_fields = 'channel'
-df = df.reset_index(drop=True)
-job = client.load_table_from_dataframe(
-    df, f"oai_dev_2.{file_type}_{channel}_{flow}_{level}", job_config=job_config
-)
-job.result()
+if __name__ == '__main__':
+    PORT = int(os.getenv("PORT")) if os.getenv("PORT") else 8080
+    app.run(host="127.0.0.1", port=PORT, debug=True)
