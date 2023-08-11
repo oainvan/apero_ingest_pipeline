@@ -36,7 +36,8 @@ def index():
         return "Message Invalid", 204
 
     run_env = "product"
-
+    print(pubsub_message)
+    print("Qua")
     try:
         mkt_ingest = MarketingSystemPipeline(
             logger=logger,

@@ -17,7 +17,6 @@ def process_response_data(**params):
     raw_result = process_json_data(data)
     if raw_result.empty:
         return 'raw_result_empty'
-    print(raw_result)
     list_col = [x.lower().replace(' ', '_') for x in raw_result.columns]
     raw_result.columns = list_col
     list_col_add = ['flow', 'channel', 'level', 'year', 'month', 'export_date', 'hours', 'timestamp', 'adsAccountId']
@@ -42,9 +41,25 @@ def process_json_data(data):
     elif isinstance(data, dict):
         raw_result = pd.DataFrame([data])
     elif isinstance(data, list):
-        for campaignInfo in data:
-            df = pd.DataFrame([campaignInfo])
-            raw_result = pd.concat([raw_result, df])
+        data = data[:-1]
+        print(len(data))
+        for campaignInfo in data[1:]:
+            row_data = campaignInfo['row']
+            flattened_data = pd.json_normalize(row_data)
+            flattened_data.columns = [col.replace(".", "_") for col in flattened_data.columns]
+            # print(flattened_data)
+            # dimension_values = row_data['dimensionValues']
+            # metric_values = row_data['metricValues']
+            #
+            # # Creating a flattened dictionary for DataFrame conversion
+            # flattened_data = {
+            #     **{f"dimension_{key}": value['value'] for key, value in dimension_values.items()},
+            #     **{f"metric_{key}": value['microsValue'] if 'microsValue' in value else value['integerValue'] for
+            #        key, value in metric_values.items()}
+            # }
+            # df = pd.DataFrame([flattened_data])
+            # print(df)
+            raw_result = pd.concat([raw_result, flattened_data])
     return raw_result
 
 

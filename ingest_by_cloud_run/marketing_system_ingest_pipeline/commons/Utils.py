@@ -52,7 +52,7 @@ def divide_chunks(l, n):
 
 
 def send_except_alert(run_env, errors, title):
-    conf = load_config('config/config.yaml')
+    conf = load_config('config/marketing_system_config.yaml')
     webhook = DiscordWebhook(url=conf[run_env]['webhook'], username="Pipeline Ingest Alert")
     embed = DiscordEmbed(title=title, color=242424)
     embed.set_timestamp()
@@ -63,7 +63,7 @@ def send_except_alert(run_env, errors, title):
 
 
 def send_logics_alert(run_env, errors, title, msg):
-    conf = load_config('config/config.yaml')
+    conf = load_config('config/marketing_system_config.yaml')
     webhook = DiscordWebhook(url=conf[run_env]['webhook'], username="Pipeline Ingest Alert")
     embed = DiscordEmbed(title=title, color=242424)
     embed.set_timestamp()

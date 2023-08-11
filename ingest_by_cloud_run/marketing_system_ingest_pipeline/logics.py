@@ -69,11 +69,11 @@ class MarketingSystemPipeline(object):
 
         # print(params)
         raw_result = process_response_data(**params)
-        print(raw_result)
-            # self.upload_data_crawl(
-            #     raw_result, str(PartitionField.EXPORT_DATE),
-            #     str(ClusterField.HOURS), **params
-            # )
+        print(raw_result.info())
+        # self.upload_data_crawl(
+        #     raw_result, str(PartitionField.EXPORT_DATE),
+        #     str(ClusterField.HOURS), **params
+        # )
 
     def upload_data_crawl(self, raw_result, partition, cluster, **params):
         """
