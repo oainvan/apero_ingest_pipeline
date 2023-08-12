@@ -37,7 +37,6 @@ def index():
 
     run_env = "product"
     print(pubsub_message)
-    print("Qua")
     try:
         mkt_ingest = MarketingSystemPipeline(
             logger=logger,
@@ -49,7 +48,7 @@ def index():
         logger.error("Exception: {msg}".format(msg=traceback.format_exc()))
         send_except_alert(
             run_env,
-            "Exception: {msg}".format(msg=ex),
+            "Exception: {msg}\n Message: {mes}".format(msg=ex, mes=pubsub_message),
             "Marketing System Ingest Pipeline"
         )
         return "", 204

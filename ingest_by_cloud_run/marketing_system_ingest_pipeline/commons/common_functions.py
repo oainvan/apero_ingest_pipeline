@@ -3,7 +3,7 @@ from commons.Utils import *
 import json
 import pandas as pd
 from io import StringIO
-
+import timeit
 
 def process_response_data(**params):
     if params['file_type'] not in ['metadata', 'metrics']:
@@ -14,7 +14,7 @@ def process_response_data(**params):
     json_content = blob.download_as_text()
     data = json.loads(json_content)['data']
 
-    raw_result = process_json_data(data)
+    raw_result = process_json_data(data, **params)
     if raw_result.empty:
         return 'raw_result_empty'
     list_col = [x.lower().replace(' ', '_') for x in raw_result.columns]
@@ -25,44 +25,45 @@ def process_response_data(**params):
 
     raw_result['export_date'] = pd.to_datetime(raw_result['export_date'], format="%Y-%m-%d").dt.date
     raw_result = raw_result.reset_index(drop=True)
+    if 'daily_budget' in raw_result.columns:
+        raw_result['daily_budget'] = raw_result['daily_budget'].astype(float)
     return raw_result
 
 
-def process_json_data(data):
+def process_json_data(data, **params):
     """
     Process raw data after json load.
     :param data:
     :return:
     """
-    print(type(data))
     raw_result = pd.DataFrame()
-    if isinstance(data, str):
-        raw_result = pd.read_csv(StringIO(data), sep='\t')
-    elif isinstance(data, dict):
-        raw_result = pd.DataFrame([data])
-    elif isinstance(data, list):
+    if params['file_type'] == 'metrics' and params['channel'] == 'admob':
         data = data[:-1]
-        print(len(data))
+        lst = []
         for campaignInfo in data[1:]:
-            row_data = campaignInfo['row']
-            flattened_data = pd.json_normalize(row_data)
-            flattened_data.columns = [col.replace(".", "_") for col in flattened_data.columns]
-            # print(flattened_data)
-            # dimension_values = row_data['dimensionValues']
-            # metric_values = row_data['metricValues']
-            #
-            # # Creating a flattened dictionary for DataFrame conversion
-            # flattened_data = {
-            #     **{f"dimension_{key}": value['value'] for key, value in dimension_values.items()},
-            #     **{f"metric_{key}": value['microsValue'] if 'microsValue' in value else value['integerValue'] for
-            #        key, value in metric_values.items()}
-            # }
-            # df = pd.DataFrame([flattened_data])
-            # print(df)
-            raw_result = pd.concat([raw_result, flattened_data])
+            flattened_data = convert_data_to_df(campaignInfo)
+            lst.append(flattened_data)
+        raw_result = pd.DataFrame(lst)
+    else:
+        if isinstance(data, str):
+            raw_result = pd.read_csv(StringIO(data), sep='\t')
+        elif isinstance(data, dict):
+            raw_result = pd.DataFrame([data])
+        elif isinstance(data, list):
+            raw_result = pd.DataFrame(data)
     return raw_result
 
+def convert_data_to_df(input_data):
+    converted_data = {}
 
+    for key, value in input_data['row']['dimensionValues'].items():
+        converted_data[f'dimension_{key}'] = value['value']
+        if 'displayLabel' in value:
+            converted_data[f'displayLabel_{key}'] = value['displayLabel']
+
+    for key, value in input_data['row']['metricValues'].items():
+        converted_data[f'metric_{key}'] = value['microsValue'] if 'microsValue' in value else value['integerValue']
+    return converted_data
 
 def get_params(object_id, env_config):
     info = object_id.split("/")
