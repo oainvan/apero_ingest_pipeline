@@ -1,0 +1,7 @@
+product:
+  gcp_project_id: "pc-api-5581123954802239973-637"
+  pubsub_topic: "projects/pc-api-5581123954802239973-637/topics/real-time-subcriptions"
+  webhook: "https://discord.com/api/webhooks/1121479026041683980/1zgR9hGUYTOfKwIST0o8P8D-8Ge2-S8nJnNUYYYF7M24rCyKSTl1lmK6-BXPxr7LOCoY"
+
+bq_config:
+  output_table: "apero-data-warehouse.apero_marketing_raw.apero_trusted_app_subcriptions"
